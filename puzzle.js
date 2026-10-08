@@ -297,14 +297,16 @@ function drawBoard() {
         var color = piece.color;
         // console.log(`Drawing piece ${i + 1}: Type=${piece.pieceType}, Position=(${piece.x}, ${piece.y}) Size=(${size.width}, ${size.height})`);
         ctx.beginPath();
-        ctx.rect(x, y, size.width * scale, size.height * scale);
         // console.log(`Drawing piece ${i + 1}: Type=${piece.pieceType}, Position=(${piece.x}, ${piece.y}), Size=(${size.width}, ${size.height})`);
+        var inset = 0;
         if (i === SelectedPiece) {
             ctx.lineWidth = 5;
+            inset = 2;
             color = "#ff0000"; // Highlight selected piece in red
         } else {
             ctx.lineWidth = 1;
         }
+        ctx.rect(x + inset, y + inset, size.width * scale - inset * 2, size.height * scale - inset * 2);
         ctx.fillStyle = color;
         ctx.fill();
         ctx.strokeStyle = "#000000";
