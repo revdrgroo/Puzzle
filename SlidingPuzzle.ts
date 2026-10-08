@@ -1,8 +1,11 @@
+const VERSION = "version 1.0.0";
+
 /** @type {HTMLCanvasElement} */
 const canvas: HTMLCanvasElement = document.getElementById("myCanvas") as HTMLCanvasElement;
 const resetButton: HTMLButtonElement = document.getElementById("resetButton") as HTMLButtonElement;
 const undoButton: HTMLButtonElement = document.getElementById("undoButton") as HTMLButtonElement;
 const replayButton: HTMLButtonElement = document.getElementById("replayButton") as HTMLButtonElement;
+const versionInfoDiv: HTMLDivElement = document.getElementById("version-info") as HTMLDivElement;
 const ctx = canvas.getContext("2d");
 
 enum PieceType { B1x1 = "b11", B1x2 = "b12", B2x1 = "b21", B2x2 = "b22" };
@@ -488,4 +491,10 @@ function drawBoard() {
     }
 }
 
+function setVersionInfo() {
+    if (versionInfoDiv == null) { return; }
+    versionInfoDiv.textContent = VERSION;
+}
+
+setVersionInfo();
 resetBoard();
