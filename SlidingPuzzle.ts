@@ -2,6 +2,7 @@
 const canvas: HTMLCanvasElement = document.getElementById("myCanvas") as HTMLCanvasElement;
 const resetButton: HTMLButtonElement = document.getElementById("resetButton") as HTMLButtonElement;
 const undoButton: HTMLButtonElement = document.getElementById("undoButton") as HTMLButtonElement;
+const replayButton: HTMLButtonElement = document.getElementById("replayButton") as HTMLButtonElement;
 const ctx = canvas.getContext("2d");
 
 enum PieceType { B1x1 = "b11", B1x2 = "b12", B2x1 = "b21", B2x2 = "b22" };
@@ -17,6 +18,7 @@ const RightOfs: Coordinates = { x: 1, y: 0 };
 const UpOfs: Coordinates = { x: 0, y: -1 };
 const DownOfs: Coordinates = { x: 0, y: 1 };
 
+const REPLAY_DELAY = 500;
 const EMPTY_SQUARE = -1;
 const NO_PIECE = -1;
 const INVALID_SIZE = { width: 0, height: 0 };
@@ -106,25 +108,30 @@ function clearBoard() {
 }
 
 function initialisePiecePositions() {
-    P1.position =  { x: 0, y: 0 };
-    P2.position =  { x: 3, y: 0 };
-    P3.position =  { x: 1, y: 1 };
-    P4.position =  { x: 2, y: 1 };
-    P5.position =  { x: 0, y: 1 };
-    P6.position =  { x: 3, y: 1 };
-    P7.position =  { x: 0, y: 3 };
-    P8.position =  { x: 3, y: 3 };
-    P9.position =  { x: 1, y: 2 };
-    P10.position =  { x: 1, y: 3 };
+    P1.position = { x: 0, y: 0 };
+    P2.position = { x: 3, y: 0 };
+    P3.position = { x: 1, y: 1 };
+    P4.position = { x: 2, y: 1 };
+    P5.position = { x: 0, y: 1 };
+    P6.position = { x: 3, y: 1 };
+    P7.position = { x: 0, y: 3 };
+    P8.position = { x: 3, y: 3 };
+    P9.position = { x: 1, y: 2 };
+    P10.position = { x: 1, y: 3 };
 }
 
 function resetBoard() {
     console.log("Resetting Board");
-    initialisePiecePositions(); 
+    initialisePiecePositions();
     updateBoard();
     SelectedPiece = 0;
     AvailableMoves = findAvailableMoves(SelectedPiece);
     drawBoard();
+}
+
+function resetPuzzle() {
+    MoveLog = [];
+    resetBoard();
 }
 
 function updateBoard() {
@@ -165,8 +172,10 @@ canvas.addEventListener('click', function (event) {
     drawBoard();
 });
 
-resetButton.addEventListener('click', resetBoard);
+resetButton.addEventListener('click', resetPuzzle);
 undoButton.addEventListener('click', undoMove);
+replayButton.addEventListener('click', replayMoves);
+
 
 
 function positionIsEmpty(position: Coordinates) {
@@ -357,7 +366,7 @@ function recordMove(pieceIndex: number, oldPosition: Coordinates, newPosition: C
 }
 
 function undoMove() {
-    if (MoveLog.length < 1) { return;  }
+    if (MoveLog.length < 1) { return; }
     var lastMove: MoveRecord = MoveLog.pop() ?? INVALID_MOVE;
     console.log("Undo Move");
     console.log(`LastMove: ${lastMove.pieceIndex} ${lastMove.oldPosition.x},${lastMove.oldPosition.y} to ${lastMove.newPosition.x},${lastMove.newPosition.y}`)
@@ -367,8 +376,36 @@ function undoMove() {
     drawBoard();
 }
 
+function replayMoves() {
+    if (MoveLog.length == 0) { return; }
+    resetBoard();
+    setTimeout(() => {
+        replayIndexedMove(0);
+    }, REPLAY_DELAY);
+}
+
+function replayIndexedMove(index: number) {
+    if (index > MoveLog.length - 1) {
+        console.log(`Finished Replay: selected piece = ${SelectedPiece}`);
+        AvailableMoves = findAvailableMoves(SelectedPiece);
+        updateBoard();
+        drawBoard();
+        return;
+    }
+    const move: MoveRecord = MoveLog[index] ?? INVALID_MOVE;
+
+    SelectedPiece = move.pieceIndex;
+    movePiece(move.pieceIndex, move.newPosition, false);
+    AvailableMoves = findAvailableMoves(move.pieceIndex);
+    updateBoard();
+    drawBoard();
+    setTimeout(() => {
+        replayIndexedMove(index + 1);
+    }, REPLAY_DELAY);
+}
+
 function drawBoard() {
-    if (ctx == null) { return;  }
+    if (ctx == null) { return; }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < Pieces.length; i++) {
         const piece = Pieces[i];
@@ -377,9 +414,9 @@ function drawBoard() {
         const y = Origin.y + piece.position.y * BoardScale;
         const size = getPieceSize(piece) ?? INVALID_SIZE;
         var color = piece.color;
-        console.log(`Drawing piece ${i + 1}: Type=${piece.pieceType}, Position=(${piece.position.x}, ${piece.position.y}) Size=(${size.width}, ${size.height})`);
+        // console.log(`Drawing piece ${i + 1}: Type=${piece.pieceType}, Position=(${piece.position.x}, ${piece.position.y}) Size=(${size.width}, ${size.height})`);
         ctx.beginPath();
-        console.log(`Drawing piece ${i + 1}: Type=${piece.pieceType}, Position=(${piece.position.x}, ${piece.position.y}), Size=(${size.width}, ${size.height})`);
+        // console.log(`Drawing piece ${i + 1}: Type=${piece.pieceType}, Position=(${piece.position.x}, ${piece.position.y}), Size=(${size.width}, ${size.height})`);
         var inset = 0;
         if (i === SelectedPiece) {
             ctx.lineWidth = 5;
