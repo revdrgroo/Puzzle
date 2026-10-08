@@ -18,7 +18,8 @@ const RightOfs: Coordinates = { x: 1, y: 0 };
 const UpOfs: Coordinates = { x: 0, y: -1 };
 const DownOfs: Coordinates = { x: 0, y: 1 };
 
-const REPLAY_DELAY = 500;
+const REPLAY_MOVE_DELAY = 500;
+const REPLAY_SELECTION_DELAY = 200;
 const EMPTY_SQUARE = -1;
 const NO_PIECE = -1;
 const INVALID_SIZE = { width: 0, height: 0 };
@@ -307,7 +308,7 @@ function isMovePieceValid(pieceIndex: number, targetPosition: Coordinates): Bool
             const boardY = targetPosition.y + dy;
             const boardPosition = { x: boardX, y: boardY };
             // Check if the target position is valid and empty
-            if (boardX >= 0 && boardX < boardWidth && boardY >= 0 && boardY < boardHeight) {
+            if (positionIsValid(boardPosition)) {
                 var isAvailable: Boolean = positionIsEmpty(boardPosition) || (getBoardPiece(boardPosition) == pieceIndex);
                 if (!isAvailable) {
                     available = false;
@@ -340,8 +341,8 @@ function movePiece(pieceIndex: number, targetPosition: Coordinates, doRecordMove
             const boardX = piece.position.x + dx;
             const boardY = piece.position.y + dy;
             var boardPosition = { x: boardX, y: boardY };
-            if (boardX >= 0 && boardX < boardWidth && boardY >= 0 && boardY < boardHeight) {
-                setBoardPiece(boardPosition, EMPTY_SQUARE); // Clear the old position
+            if (positionIsValid(boardPosition)) {
+                setBoardPiece(boardPosition, EMPTY_SQUARE);
             }
         }
     }
@@ -350,8 +351,8 @@ function movePiece(pieceIndex: number, targetPosition: Coordinates, doRecordMove
             const boardX = targetPosition.x + dx;
             const boardY = targetPosition.y + dy;
             var boardPosition = { x: boardX, y: boardY };
-            if (boardX >= 0 && boardX < boardWidth && boardY >= 0 && boardY < boardHeight) {
-                setBoardPiece(boardPosition, pieceIndex); // Set the new position
+            if (positionIsValid(boardPosition)) {
+                setBoardPiece(boardPosition, pieceIndex);
             }
         }
     }
@@ -377,11 +378,27 @@ function undoMove() {
 }
 
 function replayMoves() {
-    if (MoveLog.length == 0) { return; }
+    if (MoveLog.length == 0) {
+        return;
+    }
     resetBoard();
     setTimeout(() => {
-        replayIndexedMove(0);
-    }, REPLAY_DELAY);
+        showReplaySelectionThenReplayMove(0);
+    }, REPLAY_MOVE_DELAY);
+}
+function showReplaySelectionThenReplayMove(index:number) {
+    if (index > MoveLog.length - 1) {
+        replayIndexedMove(index);
+        return;
+    }
+    const move: MoveRecord = MoveLog[index] ?? INVALID_MOVE;
+    SelectedPiece = move.pieceIndex;
+    AvailableMoves = findAvailableMoves(move.pieceIndex);
+    updateBoard();
+    drawBoard();
+    setTimeout(() => {
+        replayIndexedMove(index);
+    }, REPLAY_SELECTION_DELAY);
 }
 
 function replayIndexedMove(index: number) {
@@ -392,16 +409,15 @@ function replayIndexedMove(index: number) {
         drawBoard();
         return;
     }
-    const move: MoveRecord = MoveLog[index] ?? INVALID_MOVE;
-
+    const move = MoveLog[index] ?? INVALID_MOVE;
     SelectedPiece = move.pieceIndex;
     movePiece(move.pieceIndex, move.newPosition, false);
     AvailableMoves = findAvailableMoves(move.pieceIndex);
     updateBoard();
     drawBoard();
     setTimeout(() => {
-        replayIndexedMove(index + 1);
-    }, REPLAY_DELAY);
+        showReplaySelectionThenReplayMove(index + 1);
+    }, REPLAY_MOVE_DELAY);
 }
 
 function drawBoard() {
@@ -449,5 +465,4 @@ function drawBoard() {
     }
 }
 
-// Start the animation
 resetBoard();
