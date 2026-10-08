@@ -1,6 +1,7 @@
 /** @type {HTMLCanvasElement} */
 const canvas: HTMLCanvasElement = document.getElementById("myCanvas") as HTMLCanvasElement;
-
+const resetButton: HTMLButtonElement = document.getElementById("resetButton") as HTMLButtonElement;
+const undoButton: HTMLButtonElement = document.getElementById("undoButton") as HTMLButtonElement;
 const ctx = canvas.getContext("2d");
 
 enum PieceType { B1x1 = "b11", B1x2 = "b12", B2x1 = "b21", B2x2 = "b22" };
@@ -9,6 +10,8 @@ const Cardinals = [Direction.Left, Direction.Right, Direction.Up, Direction.Down
 
 type Coordinates = { x: number, y: number };
 type Size = { width: number, height: number };
+type MoveRecord = { pieceIndex: number, oldPosition: Coordinates, newPosition: Coordinates };
+
 const LeftOfs: Coordinates = { x: -1, y: 0 };
 const RightOfs: Coordinates = { x: 1, y: 0 };
 const UpOfs: Coordinates = { x: 0, y: -1 };
@@ -19,6 +22,7 @@ const NO_PIECE = -1;
 const INVALID_SIZE = { width: 0, height: 0 };
 const INVALID_POSITION = { x: -1, y: -1 };
 const ZERO_COORDINATE = { x: 0, y: 0 };
+const INVALID_MOVE = { pieceIndex: -1, oldPosition: ZERO_COORDINATE, newPosition: ZERO_COORDINATE };
 
 const PieceSizes: { [key: string]: Size } = {}
 PieceSizes[PieceType.B1x1] = { width: 1, height: 1 };
@@ -45,8 +49,10 @@ const Origin = { x: 50, y: 100 }; // Origin point for drawing
 
 const Pieces = [P1, P2, P3, P4, P5, P6, P7, P8, P9, P10];
 
+
 var SelectedPiece = NO_PIECE;
 var AvailableMoves: Coordinates[] = [];
+var MoveLog: MoveRecord[] = [];
 
 const board: number[][] = [
     [EMPTY_SQUARE, EMPTY_SQUARE, EMPTY_SQUARE, EMPTY_SQUARE],
@@ -99,15 +105,35 @@ function clearBoard() {
     }
 }
 
+function initialisePiecePositions() {
+    P1.position =  { x: 0, y: 0 };
+    P2.position =  { x: 3, y: 0 };
+    P3.position =  { x: 1, y: 1 };
+    P4.position =  { x: 2, y: 1 };
+    P5.position =  { x: 0, y: 1 };
+    P6.position =  { x: 3, y: 1 };
+    P7.position =  { x: 0, y: 3 };
+    P8.position =  { x: 3, y: 3 };
+    P9.position =  { x: 1, y: 2 };
+    P10.position =  { x: 1, y: 3 };
+}
+
+function resetBoard() {
+    console.log("Resetting Board");
+    initialisePiecePositions(); 
+    updateBoard();
+    SelectedPiece = 0;
+    AvailableMoves = findAvailableMoves(SelectedPiece);
+    drawBoard();
+}
+
 function updateBoard() {
     // Clear the board
     clearBoard();
 
     for (let i = 0; i < Pieces.length; i++) {
-        const piece = Pieces[i];
-        if (piece == null) { continue; }
-        const size = PieceSizes[piece.pieceType];
-        if (size == null) { continue; }
+        const piece = Pieces[i] ?? P1;
+        const size = PieceSizes[piece.pieceType] ?? INVALID_SIZE;
         for (let dx = 0; dx < size.width; dx++) {
             for (let dy = 0; dy < size.height; dy++) {
                 const boardX = piece.position.x + dx;
@@ -138,6 +164,9 @@ canvas.addEventListener('click', function (event) {
     }
     drawBoard();
 });
+
+resetButton.addEventListener('click', resetBoard);
+undoButton.addEventListener('click', undoMove);
 
 
 function positionIsEmpty(position: Coordinates) {
@@ -292,9 +321,10 @@ function tryMovePieceTo(pieceIndex: number, targetPosition: Coordinates) {
     }
 }
 
-function movePiece(pieceIndex: number, targetPosition: Coordinates) {
+function movePiece(pieceIndex: number, targetPosition: Coordinates, doRecordMove: boolean = true) {
     const piece = Pieces[pieceIndex];
     if (piece == null) { return; }
+    const oldPosition: Coordinates = piece.position;
     const size = getPieceSize(piece) ?? INVALID_SIZE;
     for (let dx = 0; dx < size.width; dx++) {
         for (let dy = 0; dy < size.height; dy++) {
@@ -317,6 +347,24 @@ function movePiece(pieceIndex: number, targetPosition: Coordinates) {
         }
     }
     piece.position = targetPosition;
+    if (doRecordMove) {
+        recordMove(pieceIndex, oldPosition, targetPosition);
+    }
+}
+
+function recordMove(pieceIndex: number, oldPosition: Coordinates, newPosition: Coordinates) {
+    MoveLog.push({ pieceIndex: pieceIndex, oldPosition: oldPosition, newPosition: newPosition });
+}
+
+function undoMove() {
+    if (MoveLog.length < 1) { return;  }
+    var lastMove: MoveRecord = MoveLog.pop() ?? INVALID_MOVE;
+    console.log("Undo Move");
+    console.log(`LastMove: ${lastMove.pieceIndex} ${lastMove.oldPosition.x},${lastMove.oldPosition.y} to ${lastMove.newPosition.x},${lastMove.newPosition.y}`)
+    movePiece(lastMove.pieceIndex, lastMove.oldPosition, false);
+    AvailableMoves = findAvailableMoves(lastMove.pieceIndex);
+    updateBoard();
+    drawBoard();
 }
 
 function drawBoard() {
@@ -365,7 +413,4 @@ function drawBoard() {
 }
 
 // Start the animation
-SelectedPiece = 0;
-updateBoard();
-AvailableMoves = findAvailableMoves(SelectedPiece);
-drawBoard();
+resetBoard();
