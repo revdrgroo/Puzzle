@@ -419,9 +419,33 @@ function replayIndexedMove(index: number) {
     }, REPLAY_MOVE_DELAY);
 }
 
+function drawBoardFrame() {
+    if (ctx == null) { return; }
+    var lineWidth = 15;
+    var margin = lineWidth + 5;
+    var top = Origin.y - margin;
+    var bottom = Origin.y + boardHeight * BoardScale + margin;
+    var left = Origin.x - margin;
+    var right = Origin.x + BoardScale * boardWidth + margin;
+    var outletLeft = Origin.x + BoardScale;
+    var outletRight = Origin.x + BoardScale * 3;
+    ctx.beginPath();
+    ctx.moveTo(outletLeft, top);
+    ctx.lineTo(left, top);
+    ctx.lineTo(left, bottom);
+    ctx.lineTo(right, bottom);
+    ctx.lineTo(right, top);
+    ctx.lineTo(outletRight, top);
+    ctx.lineWidth = 15;
+    ctx.strokeStyle = "#f4f402";
+    ctx.stroke();
+    ctx.closePath();
+}
+
 function drawBoard() {
     if (ctx == null) { return; }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBoardFrame();
     for (let i = 0; i < Pieces.length; i++) {
         const piece = Pieces[i];
         if (piece == null) { continue; }
