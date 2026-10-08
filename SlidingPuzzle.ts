@@ -307,7 +307,6 @@ function isMovePieceValid(pieceIndex: number, targetPosition: Coordinates): Bool
             const boardX = targetPosition.x + dx;
             const boardY = targetPosition.y + dy;
             const boardPosition = { x: boardX, y: boardY };
-            // Check if the target position is valid and empty
             if (positionIsValid(boardPosition)) {
                 var isAvailable: Boolean = positionIsEmpty(boardPosition) || (getBoardPiece(boardPosition) == pieceIndex);
                 if (!isAvailable) {
