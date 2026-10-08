@@ -1,5 +1,5 @@
 {
-    "version": "2.0.0",
+    "version": "2.0.0", 
     "tasks": [
         {
             "label": "Publish Project",
@@ -16,6 +16,19 @@
                 "reveal": "always",
                 "focus": true,
                 "panel": "shared"
+            }
+        },
+        {
+            "type": "typescript",
+            "tsconfig": "tsconfig.json",
+            "option": "watch",
+            "problemMatcher": [
+                "$tsc-watch"
+            ],
+            "group": "build",
+            "label": "tsc: watch - tsconfig.json",
+            "runOptions": {
+                "runOn": "folderOpen"
             }
         }
     ]
