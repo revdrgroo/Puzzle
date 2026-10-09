@@ -1,6 +1,7 @@
 const VERSION = "version 1.0.0";
 
 /** @type {HTMLCanvasElement} */
+const container: HTMLDivElement = document.getElementById('canvas-container') as HTMLDivElement;
 const canvas: HTMLCanvasElement = document.getElementById("myCanvas") as HTMLCanvasElement;
 const resetButton: HTMLButtonElement = document.getElementById("resetButton") as HTMLButtonElement;
 const undoButton: HTMLButtonElement = document.getElementById("undoButton") as HTMLButtonElement;
@@ -8,6 +9,7 @@ const replayButton: HTMLButtonElement = document.getElementById("replayButton") 
 const versionInfoDiv: HTMLDivElement = document.getElementById("version-info") as HTMLDivElement;
 const ctx = canvas.getContext("2d");
 
+enum AppMode { WAITING, REPLAYING, ANIMATING };
 enum PieceType { B1x1 = "b11", B1x2 = "b12", B2x1 = "b21", B2x2 = "b22" };
 enum Direction { Left, Right, Up, Down };
 const Cardinals = [Direction.Left, Direction.Right, Direction.Up, Direction.Down];
@@ -15,6 +17,7 @@ const Cardinals = [Direction.Left, Direction.Right, Direction.Up, Direction.Down
 type Coordinates = { x: number, y: number };
 type Size = { width: number, height: number };
 type MoveRecord = { pieceIndex: number, oldPosition: Coordinates, newPosition: Coordinates };
+type BoardRepresentation = { pieceLocations : Coordinates[], selectedPiece : number };
 
 const LeftOfs: Coordinates = { x: -1, y: 0 };
 const RightOfs: Coordinates = { x: 1, y: 0 };
@@ -59,6 +62,7 @@ const Pieces = [P1, P2, P3, P4, P5, P6, P7, P8, P9, P10];
 var SelectedPiece = NO_PIECE;
 var AvailableMoves: Coordinates[] = [];
 var MoveLog: MoveRecord[] = [];
+var SavedBoard: BoardRepresentation;
 
 const board: number[][] = [
     [EMPTY_SQUARE, EMPTY_SQUARE, EMPTY_SQUARE, EMPTY_SQUARE],
@@ -70,6 +74,8 @@ const board: number[][] = [
 
 const boardWidth: number = board[0]?.length ?? 0;
 const boardHeight: number = board.length;
+
+var appMode: AppMode = AppMode.WAITING;
 
 function positionIsValid(position: Coordinates): boolean {
     return position.x >= 0 && position.x < boardWidth && position.y >= 0 && position.y < boardHeight;
@@ -156,6 +162,9 @@ function updateBoard() {
 }
 
 canvas.addEventListener('click', function (event) {
+    if (appMode != AppMode.WAITING) {
+        return;
+    }
     const x = event.offsetX;
     const y = event.offsetY;
 
@@ -176,9 +185,27 @@ canvas.addEventListener('click', function (event) {
     drawBoard();
 });
 
-resetButton.addEventListener('click', resetPuzzle);
-undoButton.addEventListener('click', undoMove);
-replayButton.addEventListener('click', replayMoves);
+resetButton.addEventListener('click', function () {
+    if (appMode == AppMode.WAITING) {
+        resetPuzzle();
+    }
+});
+undoButton.addEventListener('click', function () {
+    if (appMode == AppMode.WAITING) {
+        undoMove();
+    }
+});
+
+var StopReplay: boolean = false;
+replayButton.addEventListener('click', function () {
+    if (appMode == AppMode.WAITING) {
+        StopReplay = false;
+        replayMoves();
+    } else if (appMode == AppMode.REPLAYING) {
+        // Set global replay stop flag
+        StopReplay = true;
+    }
+});
 
 
 
@@ -383,14 +410,19 @@ function replayMoves() {
     if (MoveLog.length == 0) {
         return;
     }
+    appMode = AppMode.REPLAYING;
+    SavedBoard = cloneBoard();
+    replayButton.textContent = "Stop Replay";
     resetBoard();
     setTimeout(() => {
         showReplaySelectionThenReplayMove(0);
     }, REPLAY_MOVE_DELAY);
 }
-function showReplaySelectionThenReplayMove(index:number) {
+function showReplaySelectionThenReplayMove(index: number) {
     if (index > MoveLog.length - 1) {
         replayIndexedMove(index);
+        appMode = AppMode.WAITING;
+        replayButton.textContent = "Replay";
         return;
     }
     const move: MoveRecord = MoveLog[index] ?? INVALID_MOVE;
@@ -404,11 +436,16 @@ function showReplaySelectionThenReplayMove(index:number) {
 }
 
 function replayIndexedMove(index: number) {
-    if (index > MoveLog.length - 1) {
+    if (index > MoveLog.length - 1 || StopReplay == true) {
+        restoreBoard(SavedBoard);
+        updateBoard();
         console.log(`Finished Replay: selected piece = ${SelectedPiece}`);
         AvailableMoves = findAvailableMoves(SelectedPiece);
         updateBoard();
         drawBoard();
+        appMode = AppMode.WAITING;
+        replayButton.textContent = "Replay";
+        StopReplay = false;
         return;
     }
     const move = MoveLog[index] ?? INVALID_MOVE;
@@ -491,10 +528,60 @@ function drawBoard() {
     }
 }
 
+function cloneBoard(): BoardRepresentation {
+    var locations: Coordinates[] = [];
+    for (var i: number = 0; i < Pieces.length; i++) {
+        var pos: Coordinates = Pieces[i]?.position || ZERO_COORDINATE;
+        locations.push({ x: pos.x, y: pos.y });
+    }
+    return { pieceLocations: locations, selectedPiece: SelectedPiece };
+}
+
+function restoreSavedBoard() {
+    restoreBoard(SavedBoard);
+
+}
+function restoreBoard(clone: BoardRepresentation) {
+    for (var i = 0; i < clone.pieceLocations.length; i++) {
+        const pos = clone.pieceLocations[i] ?? ZERO_COORDINATE;
+        const piece = Pieces[i];
+        if (piece != null) {
+            piece.position = { x: pos.x, y: pos.y };
+        }
+    }
+    SelectedPiece = clone.selectedPiece;
+}
+
 function setVersionInfo() {
     if (versionInfoDiv == null) { return; }
     versionInfoDiv.textContent = VERSION;
 }
+
+
+function resizeCanvas() { 
+    console.log("resizeCanvas");
+    // 1. Get the actual bounding layout size of the container in Wix
+    const rect : DOMRect = container.getBoundingClientRect();
+    console.log(`Bounding rect ${rect.x}, ${rect.y}, ${rect.width}, ${rect.height}`);
+    // 2. Account for high-density / Retina screens to avoid blurriness
+    const dpr = 1; window.devicePixelRatio || 1;
+
+    // 3. Set the internal drawing buffer size (bitmap)
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+
+    console.log(`New canvas size ${canvas.width} x ${canvas.height}`)
+    // 4. Normalize the coordinate system back to standard CSS sizes
+    // ctx?.scale(dpr, dpr);
+
+    drawBoard();
+}
+
+
+// Run once on load and listen for Wix iFrame window size shifts
+// window.addEventListener('DOMContentLoaded', resizeCanvas);
+// window.addEventListener('resize', resizeCanvas);
+// resizeCanvas();
 
 setVersionInfo();
 resetBoard();

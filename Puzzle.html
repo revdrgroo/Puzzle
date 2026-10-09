@@ -33,7 +33,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width:100%;
+            width: 100%;
         }
 
         .instructions {
@@ -42,7 +42,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width:100%;
+            width: 100%;
         }
 
         .button-row {
@@ -71,15 +71,17 @@
 
 <body>
     <div class="app-container">
-    <div class="version-info" id="version-info">Version 1.0</div>
-    <div class="instructions">Goal: Get 2x2 square to opening at the top of the board.</div>
-    <div class="button-row">
-        <button class="btn" id="resetButton">Reset</button>
-        <button class="btn" id="undoButton">Undo</button>
-        <button class="btn" id="replayButton">Replay</button>
-    </div>
-    <canvas id="myCanvas" width="600" height="600"></canvas>
-    <script src="dist/SlidingPuzzle.js"></script>
+        <div class="version-info" id="version-info">Version 1.0</div>
+        <div class="instructions">Goal: Get 2x2 square to opening at the top of the board.</div>
+        <div class="button-row">
+            <button class="btn" id="resetButton">Reset</button>
+            <button class="btn" id="undoButton">Undo</button>
+            <button class="btn" id="replayButton">Replay</button>
+        </div>
+            <div id="canvas-container" class="canvas-container">
+                <canvas id="myCanvas" width="400" height="550"></canvas>
+            </div>
+        <script src="dist/SlidingPuzzle.js"></script>
 </body>
 
 </html>
